@@ -43,7 +43,7 @@ class ChessFeatureExtractor:
         self.white_indices = np.full(32, self.INT16_MAX, dtype=np.uint16)
         self.black_indices = np.full(32, self.INT16_MAX, dtype=np.uint16)
         self.pieces_char = [""] * 32
-        self.pieces_sq = np.zeros(32, dtype=np.int8)
+        self.pieces_sq = np.zeros(32, dtype=np.int32)
         self.turn = np.zeros(1, dtype=np.uint8)
         self.score = np.zeros(1, dtype=np.float32)
 
@@ -71,13 +71,15 @@ class ChessFeatureExtractor:
             copy them if you need to retain values across calls.
         """
 
-        raw_sample = orjson.loads(jsonl_bytes)
+        raw_sample = orjson.loads(jsonl_bytes.decode("utf-8"))
 
         self.white_indices.fill(self.INT16_MAX)
         self.black_indices.fill(self.INT16_MAX)
         self.pieces_sq.fill(0)
 
-        self._parse_fen(raw_sample["fen"])
+        if not self._parse_fen(raw_sample["fen"]):
+            return None
+
         self._parse_eval(raw_sample["evals"])
 
         return self.white_indices, self.black_indices, self.turn, self.score
@@ -103,6 +105,9 @@ class ChessFeatureExtractor:
                 elif char == "k":
                     bk_sq = sq
                 else:
+                    if piece_count >= 32:
+                        return False
+
                     self.pieces_char[piece_count] = char
                     self.pieces_sq[piece_count] = sq
                     piece_count += 1
@@ -119,6 +124,8 @@ class ChessFeatureExtractor:
 
             p_type_b = p_type_w + 5 if p_type_w < 5 else p_type_w - 5
             self.black_indices[i] = bk_offset + (p_type_b * 64) + (sq ^ 56)
+
+        return True
 
     def _parse_eval(self, evals: list):
         best_pv = evals[0]["pvs"][0]
