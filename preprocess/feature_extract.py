@@ -45,7 +45,7 @@ class ChessFeatureExtractor:
         self.black_indices = np.full(32, self.INT16_MAX, dtype=np.uint16)
         self.pieces_char = [""] * 32
         self.pieces_sq = np.zeros(32, dtype=np.int32)
-        self.material_value = np.zeros(1, dtype=np.uint8)
+        self.material_value = np.zeros(1, dtype=np.uint16)
         self.turn = np.zeros(1, dtype=np.uint8)
         self.score = np.zeros(1, dtype=np.float32)
 

@@ -17,7 +17,7 @@ def parse_tfrecord_fn(example_protos: tf.Tensor):
 
     white = tf.io.decode_raw(parsed["white"], tf.uint16)
     black = tf.io.decode_raw(parsed["black"], tf.uint16)
-    material_value = tf.io.decode_raw(parsed["material_value"], tf.uint8)
+    material_value = tf.io.decode_raw(parsed["material_value"], tf.uint16)
     turn = tf.io.decode_raw(parsed["turn"], tf.uint8)
     score = tf.io.decode_raw(parsed["score"], tf.float32)
 
