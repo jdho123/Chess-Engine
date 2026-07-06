@@ -6,6 +6,7 @@ import os
 FEATURE_DESCRIPTION = {
     "white": tf.io.FixedLenFeature([], tf.string),
     "black": tf.io.FixedLenFeature([], tf.string),
+    "material_value": tf.io.FixedLenFeature([], tf.string),
     "turn": tf.io.FixedLenFeature([], tf.string),
     "score": tf.io.FixedLenFeature([], tf.string),
 }
@@ -16,15 +17,22 @@ def parse_tfrecord_fn(example_protos: tf.Tensor):
 
     white = tf.io.decode_raw(parsed["white"], tf.uint16)
     black = tf.io.decode_raw(parsed["black"], tf.uint16)
+    material_value = tf.io.decode_raw(parsed["material_value"], tf.uint8)
     turn = tf.io.decode_raw(parsed["turn"], tf.uint8)
     score = tf.io.decode_raw(parsed["score"], tf.float32)
 
     white = tf.reshape(white, (-1, 32))
     black = tf.reshape(black, (-1, 32))
+    material_value = tf.reshape(material_value, (-1, 32))
     turn = tf.reshape(turn, (-1, 1))
     score = tf.reshape(score, (-1, 1))
 
-    return {"white": white, "black": black, "turn": turn}, score
+    return {
+        "white": white,
+        "black": black,
+        "material_value": material_value,
+        "turn": turn,
+    }, score
 
 
 def create_dataset(
