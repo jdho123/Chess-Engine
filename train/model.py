@@ -3,6 +3,46 @@ import tensorflow as tf
 
 
 @tf.keras.utils.register_keras_serializable(package="custom_layers")
+class SparseAccumulator(tf.keras.layers.Layer):
+    def __init__(
+        self, input_dim: int, accumulator_dim: int, pad_value: int = 65535, **kwargs
+    ):
+        super(SparseAccumulator, self).__init__(**kwargs)
+        self.input_dim = input_dim
+        self.accumulator_dim = accumulator_dim
+        self.pad_value = pad_value
+
+        self.embedding = None
+        self.bias = None
+
+    def build(self, input_shape):
+        self.embedding = tf.keras.layers.Embedding(
+            input_dim=self.input_dim,
+            output_dim=self.accumulator_dim,
+            name="feature_weights",
+        )
+
+        self.bias = self.add_weight(
+            shape=(self.accumulator_dim,),
+            initializer="zeros",
+            name="bias",
+            trainable=True,
+        )
+        super(SparseAccumulator, self).build(input_shape)
+
+    def call(self, inputs):
+        is_valid = tf.not_equal(inputs, self.pad_value)
+        mask = tf.cast(is_valid, tf.float32)
+        mask = tf.expand_dims(mask, axis=-1)
+
+        safe_inputs = tf.where(is_valid, inputs, tf.zeros_like(inputs))
+        x = self.embedding(safe_inputs)
+        x = x * mask
+        x = tf.reduce_sum(x, axis=1)
+        return x + self.bias
+
+
+@tf.keras.utils.register_keras_serializable(package="custom_layers")
 class PerspectiveMerge(tf.keras.layers.Layer):
     def call(self, inputs):
         w_acc, b_acc, turn = inputs
@@ -57,7 +97,6 @@ class BucketedDense(tf.keras.layers.Layer):
 
     def call(self, inputs):
         features, material_count = inputs
-
         num_normal_buckets = self.num_buckets - 1
 
         mat_float = tf.cast(material_count, tf.float32)
@@ -73,10 +112,14 @@ class BucketedDense(tf.keras.layers.Layer):
         )
         bucket_idx = tf.reshape(bucket_idx, (-1,))
 
-        W_batch = tf.gather(self.kernal, bucket_idx)
-        b_batch = tf.gather(self.bias, bucket_idx)
+        transposed_kernel = tf.transpose(self.kernel, perm=(1, 0, 2))
+        flat_kernel = tf.reshape(transposed_kernel, (tf.shape(self.kernel)[1], -1))
 
-        output = tf.einsum("bi,bij->bj", features, W_batch) + b_batch
+        all_outputs = tf.matmul(features, flat_kernel)
+        all_outputs = tf.reshape(all_outputs, (-1, self.num_buckets, self.units))
+        all_outputs = all_outputs + self.bias
+
+        output = tf.gather(all_outputs, bucket_idx, batch_dims=1)
 
         if self.activation is not None:
             output = self.activation(output)
@@ -85,14 +128,20 @@ class BucketedDense(tf.keras.layers.Layer):
 
 
 def build_model(
-    input_dim: int, accumulator_dim: int, hidden_dim: int, bucket_params: dict
+    input_dim: int,
+    embedding_dim: int,
+    accumulator_dim: int,
+    hidden_dim: int,
+    bucket_params: dict,
 ) -> tf.keras.Model:
     white = tf.keras.Input(shape=(input_dim,), name="white")
     black = tf.keras.Input(shape=(input_dim,), name="black")
     material_value = tf.keras.Input(shape=(1,), name="material_value")
     turn = tf.keras.Input(shape=(1,), name="turn")
 
-    shared_weights = tf.keras.layers.Dense(accumulator_dim, name="shared_weights")
+    shared_weights = SparseAccumulator(
+        input_dim=embedding_dim, accumulator_dim=accumulator_dim
+    )
 
     acc_white = shared_weights(white)
     acc_black = shared_weights(black)
@@ -103,7 +152,7 @@ def build_model(
     hidden = tf.keras.layers.Dense(hidden_dim)(crelu1)
     crelu2 = tf.keras.layers.ReLU(max_value=1.0)(hidden)
 
-    bucketed = BucketedDense(hidden_dim, **bucket_params)(crelu2)
+    bucketed = BucketedDense(hidden_dim, **bucket_params)([crelu2, material_value])
     crelu3 = tf.keras.layers.ReLU(max_value=1.0)(bucketed)
 
     output = tf.keras.layers.Dense(1, activation="sigmoid")(crelu3)
