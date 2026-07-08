@@ -1,0 +1,19 @@
+seed: 42
+
+data_dir: "data/processed"
+
+input_dim: 32
+embedding_dim: 40960
+accumulator_dim: 256
+hidden_dim: 32
+
+test_split: 0.01
+block_length: 2048
+shuffle_buffer: 100000
+
+peak_lr: 0.001
+batch_size: 16384
+epochs: 10
+
+model_dir: "models"
+log_dir: "logs"

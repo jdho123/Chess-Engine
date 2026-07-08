@@ -23,9 +23,9 @@ def _process_batch(
         if result is None:
             continue
 
-        w, b, t, s = result
+        w, b, m, t, s = result
 
-        record_bytes = serialize_to_tfrecord(w, b, t, s)
+        record_bytes = serialize_to_tfrecord(w, b, m, t, s)
         writer.write(record_bytes)
 
 

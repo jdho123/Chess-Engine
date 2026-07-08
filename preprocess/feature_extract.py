@@ -38,12 +38,14 @@ class ChessFeatureExtractor:
         "r": 8,
         "q": 9,
     }
+    PIECE_TO_VALUE = {"p": 1, "n": 3, "b": 3, "r": 5, "q": 9}
 
     def __init__(self):
         self.white_indices = np.full(32, self.INT16_MAX, dtype=np.uint16)
         self.black_indices = np.full(32, self.INT16_MAX, dtype=np.uint16)
         self.pieces_char = [""] * 32
         self.pieces_sq = np.zeros(32, dtype=np.int32)
+        self.material_value = np.zeros(1, dtype=np.uint16)
         self.turn = np.zeros(1, dtype=np.uint8)
         self.score = np.zeros(1, dtype=np.float32)
 
@@ -82,7 +84,13 @@ class ChessFeatureExtractor:
 
         self._parse_eval(raw_sample["evals"])
 
-        return self.white_indices, self.black_indices, self.turn, self.score
+        return (
+            self.white_indices,
+            self.black_indices,
+            self.material_value,
+            self.turn,
+            self.score,
+        )
 
     def _parse_fen(self, fen: str):
         fen_parts = fen.split(" ", 2)
@@ -91,6 +99,7 @@ class ChessFeatureExtractor:
         self.turn[0] = 1 if len(fen_parts) > 1 and fen_parts[1] == "w" else 0
 
         piece_count = 0
+        material_value = 0
         wk_sq, bk_sq = -1, -1
 
         sq = 56
@@ -111,7 +120,10 @@ class ChessFeatureExtractor:
                     self.pieces_char[piece_count] = char
                     self.pieces_sq[piece_count] = sq
                     piece_count += 1
+                    material_value += self.PIECE_TO_VALUE[char.lower()]
                 sq += 1
+
+        self.material_value[0] = material_value
 
         wk_offset = wk_sq * 640
         bk_offset = (bk_sq ^ 56) * 640

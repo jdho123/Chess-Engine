@@ -3,7 +3,11 @@ import numpy as np
 
 
 def serialize_to_tfrecord(
-    white: np.ndarray, black: np.ndarray, turn: np.ndarray, score: np.ndarray
+    white: np.ndarray,
+    black: np.ndarray,
+    material_value: np.ndarray,
+    turn: np.ndarray,
+    score: np.ndarray,
 ) -> bytes:
     """Serializes chess feature arrays into a TFRecord Example.
 
@@ -30,6 +34,9 @@ def serialize_to_tfrecord(
         ),
         "black": tf.train.Feature(
             bytes_list=tf.train.BytesList(value=[black.tobytes()])
+        ),
+        "material_value": tf.train.Feature(
+            bytes_list=tf.train.BytesList(value=[material_value.tobytes()])
         ),
         "turn": tf.train.Feature(bytes_list=tf.train.BytesList(value=[turn.tobytes()])),
         "score": tf.train.Feature(

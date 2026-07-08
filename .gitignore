@@ -289,3 +289,5 @@ Testing/
 .cache/
 
 data/
+logs/
+models/
