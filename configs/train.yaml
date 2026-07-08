@@ -11,6 +11,8 @@ test_split: 0.01
 block_length: 2048
 shuffle_buffer: 100000
 
+compression_type: "GZIP"
+
 peak_lr: 0.001
 batch_size: 16384
 epochs: 10
