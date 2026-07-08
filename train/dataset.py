@@ -23,7 +23,7 @@ def parse_tfrecord_fn(example_protos: tf.Tensor):
 
     white = tf.reshape(white, (-1, 32))
     black = tf.reshape(black, (-1, 32))
-    material_value = tf.reshape(material_value, (-1, 32))
+    material_value = tf.reshape(material_value, (-1, 1))
     turn = tf.reshape(turn, (-1, 1))
     score = tf.reshape(score, (-1, 1))
 
@@ -39,7 +39,8 @@ def create_dataset(
     data_dir: str,
     batch_size: int,
     test_split: float,
-    shuffle_buffer_size: int = 10_000,
+    block_length: int,
+    shuffle_buffer: int,
     seed: int = 42,
 ) -> tf.data.Dataset:
     file_pattern = os.path.join(data_dir, "*.tfrecord.gz")
@@ -59,7 +60,10 @@ def create_dataset(
     if num_test_files == 0 and num_files > 1:
         num_test_files = 1
 
-    approx_shard_samples = sum(1 for _ in tf.compat.v1.io.tf_record_iterator(shards[0]))
+    options = tf.io.TFRecordOptions(compression_type="GZIP")
+    approx_shard_samples = sum(
+        1 for _ in tf.compat.v1.io.tf_record_iterator(shards[0], options=options)
+    )
     approx_train_samples = approx_shard_samples * (num_files - num_test_files)
     approx_test_samples = approx_shard_samples * num_test_files
 
@@ -69,15 +73,24 @@ def create_dataset(
     def _build_pipeline(
         file_list: list[str], is_training: bool = True
     ) -> tf.data.Dataset:
-        dataset = tf.data.TFRecordDataset(
-            file_list, compression_type="GZIP", num_parallel_reads=tf.data.AUTOTUNE
+        dataset = tf.data.Dataset.from_tensor_slices(file_list)
+
+        if is_training:
+            dataset = dataset.shuffle(len(file_list), seed=seed)
+
+        dataset = dataset.interleave(
+            lambda f: tf.data.TFRecordDataset(f, compression_type="GZIP"),
+            cycle_length=tf.data.AUTOTUNE,
+            num_parallel_calls=tf.data.AUTOTUNE,
+            block_length=block_length,
+            deterministic=not is_training,
         )
 
         if is_training:
-            dataset = dataset.shuffle(buffer_size=shuffle_buffer_size, seed=seed)
+            dataset = dataset.shuffle(buffer_size=shuffle_buffer, seed=seed)
             dataset = dataset.repeat()
 
-        dataset = dataset.batch(batch_size)
+        dataset = dataset.batch(batch_size, drop_remainder=True)
 
         dataset = dataset.map(parse_tfrecord_fn, num_parallel_calls=tf.data.AUTOTUNE)
 
