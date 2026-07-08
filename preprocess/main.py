@@ -12,6 +12,8 @@ import io
 from preprocess.feature_extract import ChessFeatureExtractor
 from preprocess.serialize import serialize_to_tfrecord
 
+COMPRESSION_EXT = {"GZIP": ".tfrecord.gz", "ZLIB": ".tfrecord.zlib", "": ".tfrecord"}
+
 
 def _process_batch(
     lines: list[bytes],
@@ -55,20 +57,22 @@ def _tfrecord_creation_worker(
     input_queue: mp.Queue,
     output_dir: str,
     target_mb: int,
+    compression_type: str = "GZIP",
     check_interval: int = 10_000,
 ):
     target_bytes = target_mb * 1024 * 1024
 
     def get_filepath(worker_id: int, file_idx: int) -> str:
         file_id_bytes = f"{worker_id}_{file_idx}".encode("utf-8")
-        filename = f"shard-{hashlib.sha256(file_id_bytes).hexdigest()}.tfrecord.gz"
+        ext = COMPRESSION_EXT[compression_type]
+        filename = f"shard-{hashlib.sha256(file_id_bytes).hexdigest()}{ext}"
 
         return os.path.join(output_dir, filename)
 
     current_file = get_filepath(worker_id, file_idx)
 
     feature_extractor = ChessFeatureExtractor()
-    options = tf.io.TFRecordOptions(compression_type="GZIP")
+    options = tf.io.TFRecordOptions(compression_type=compression_type)
     writer = tf.io.TFRecordWriter(current_file, options=options)
 
     records_since_check = 0
@@ -95,14 +99,14 @@ def _tfrecord_creation_worker(
 
 
 def _worker_supervisor(
-    worker_id: int, input_queue: str, output_dir: str, target_mb: int
+    worker_id: int, input_queue: str, output_dir: str, target_mb: int, compression_type: str = "GZIP"
 ):
     file_idx = 0
 
     while True:
         p = mp.Process(
             target=_tfrecord_creation_worker,
-            args=(worker_id, file_idx, input_queue, output_dir, target_mb),
+            args=(worker_id, file_idx, input_queue, output_dir, target_mb, compression_type),
         )
         p.start()
         p.join()
@@ -123,7 +127,7 @@ def main(args: dict):
     for i in range(args["num_workers"]):
         p = mp.Process(
             target=_worker_supervisor,
-            args=(i, queue, args["output_dir"], args["target_mb"]),
+            args=(i, queue, args["output_dir"], args["target_mb"], args["compression_type"]),
         )
         p.start()
         workers.append(p)
@@ -145,7 +149,7 @@ def main(args: dict):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Parallelized conversoin of Zstd-compressed jsonl chess position data to GZIP-compressed TFRecords."
+        description="Parallelized conversion of Zstd-compressed JSONL chess position data to TFRecord shards with configurable compression."
     )
 
     parser.add_argument(
@@ -181,6 +185,14 @@ if __name__ == "__main__":
         type=int,
         default=256,
         help="Number of lines sent to a worker in a single IPC queue batch. Default is 1024.",
+    )
+
+    parser.add_argument(
+        "--compression_type",
+        type=str,
+        default="GZIP",
+        choices=["GZIP", "ZLIB", ""],
+        help="TFRecord compression type. 'GZIP' (default), 'ZLIB', or '' for no compression.",
     )
 
     args_dict = vars(parser.parse_args())

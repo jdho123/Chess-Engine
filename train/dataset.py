@@ -3,6 +3,8 @@ import random
 import glob
 import os
 
+COMPRESSION_EXT = {"GZIP": ".tfrecord.gz", "ZLIB": ".tfrecord.zlib", "": ".tfrecord"}
+
 FEATURE_DESCRIPTION = {
     "white": tf.io.FixedLenFeature([], tf.string),
     "black": tf.io.FixedLenFeature([], tf.string),
@@ -42,13 +44,15 @@ def create_dataset(
     block_length: int,
     shuffle_buffer: int,
     seed: int = 42,
+    compression_type: str = "GZIP",
 ) -> tf.data.Dataset:
-    file_pattern = os.path.join(data_dir, "*.tfrecord.gz")
+    ext = COMPRESSION_EXT[compression_type]
+    file_pattern = os.path.join(data_dir, f"*{ext}")
     shards = sorted(glob.glob(file_pattern))
 
     if not shards:
         raise FileNotFoundError(
-            f"No TFRecord files found in '{data_dir}' matching pattern '*.tfrecord.gz'"
+            f"No TFRecord files found in '{data_dir}' matching pattern '*{ext}'"
         )
 
     random.seed(seed)
@@ -60,7 +64,7 @@ def create_dataset(
     if num_test_files == 0 and num_files > 1:
         num_test_files = 1
 
-    options = tf.io.TFRecordOptions(compression_type="GZIP")
+    options = tf.io.TFRecordOptions(compression_type=compression_type)
     approx_shard_samples = sum(
         1 for _ in tf.compat.v1.io.tf_record_iterator(shards[0], options=options)
     )
@@ -79,7 +83,7 @@ def create_dataset(
             dataset = dataset.shuffle(len(file_list), seed=seed)
 
         dataset = dataset.interleave(
-            lambda f: tf.data.TFRecordDataset(f, compression_type="GZIP"),
+            lambda f: tf.data.TFRecordDataset(f, compression_type=compression_type),
             cycle_length=tf.data.AUTOTUNE,
             num_parallel_calls=tf.data.AUTOTUNE,
             block_length=block_length,

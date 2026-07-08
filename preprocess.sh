@@ -10,6 +10,7 @@ INPUT_FILE="data/raw/lichess_db_eval.jsonl.zst"
 OUTPUT_DIR="data/processed" 
 TARGET_MB=100
 BATCH_SIZE=256
+COMPRESSION_TYPE="GZIP"
 DOWNLOAD_LINK="https://database.lichess.org/lichess_db_eval.jsonl.zst"
 # ==========================================
 
@@ -40,5 +41,6 @@ python -m preprocess.main \
     --output_dir "$OUTPUT_DIR" \
     --target_mb "$TARGET_MB" \
     --batch_size "$BATCH_SIZE" \
+    --compression_type "$COMPRESSION_TYPE" \
 
 deactivate

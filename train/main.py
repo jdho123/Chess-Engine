@@ -33,6 +33,7 @@ def main(config_path: str):
         config["block_length"],
         config["shuffle_buffer"],
         config["seed"],
+        config["compression_type"],
     )
 
     model = build_model(
