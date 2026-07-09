@@ -41,6 +41,17 @@ class SparseAccumulator(tf.keras.layers.Layer):
         x = tf.reduce_sum(x, axis=1)
         return x + self.bias
 
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "input_dim": self.input_dim,
+                "accumulator_dim": self.accumulator_dim,
+                "pad_value": self.pad_value,
+            }
+        )
+        return config
+
 
 @tf.keras.utils.register_keras_serializable(package="custom_layers")
 class PerspectiveMerge(tf.keras.layers.Layer):
@@ -125,6 +136,19 @@ class BucketedDense(tf.keras.layers.Layer):
             output = self.activation(output)
 
         return output
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "units": self.units,
+                "num_buckets": self.num_buckets,
+                "min_material": self.min_material,
+                "max_material": self.max_material,
+                "activation": tf.keras.activations.serialize(self.activation),
+            }
+        )
+        return config
 
 
 def build_model(
