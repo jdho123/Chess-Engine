@@ -4,6 +4,7 @@ import numpy as np
 import argparse
 import yaml
 
+# pylint: disable=unused-import
 from train.model import SparseAccumulator, PerspectiveMerge, BucketedDense
 from quantize.export_header import export_to_header
 from quantize.quantize import quantize
