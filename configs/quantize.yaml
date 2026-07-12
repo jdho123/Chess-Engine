@@ -3,5 +3,5 @@ QB: 64
 
 model_path: "models/chess_eval.keras"
 
-output_path: "engine/include/nnue.h"
-template_path: "quantize/nnue.h.jinja"
+output_path: "engine/include/nnue_weights.h"
+template_path: "quantize/nnue_weights.h.jinja"
