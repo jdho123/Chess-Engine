@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-namespace NNUE {
+namespace NNUEWeights {
 
 {% for layer in layers %}
     alignas(64) const unsigned char {{ layer.name }}_bytes[{{ layer.size }}] = {
