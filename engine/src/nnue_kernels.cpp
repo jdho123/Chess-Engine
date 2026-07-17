@@ -1,6 +1,6 @@
 #include "nnue_kernels.h"
 
-namespace NNUEKernels {
+namespace NNUE {
     void kernel_accumulator_hidden(
         std::array<uint8_t, ACCUMULATOR_SIZE>& x, 
         std::array<int8_t, ACCUMULATOR_SIZE * HIDDEN_SIZE>& w_T, 

@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <array>
 
-namespace NNUEKernels {
+namespace NNUE {
     constexpr size_t ACCUMULATOR_SIZE = 512;
     constexpr size_t HIDDEN_SIZE = 32;
     constexpr size_t OUTPUT_SIZE = 1;
