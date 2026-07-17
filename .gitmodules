@@ -1,0 +1,3 @@
+[submodule "engine/third_party/chess"]
+	path = engine/third_party/chess
+	url = https://github.com/Disservin/chess-library.git
