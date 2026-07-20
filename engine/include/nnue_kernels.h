@@ -29,6 +29,6 @@ namespace NNUE {
 
     void kernel_accumulator_addition(
         std::array<int16_t, ACCUMULATOR_SIZE>& a,
-        const std::span<int16_t, ACCUMULATOR_SIZE>& w
+        const std::span<const int16_t, ACCUMULATOR_SIZE>& w
     );
 }

@@ -148,7 +148,7 @@ namespace NNUE {
 
     void kernel_accumulator_addition(
         std::array<int16_t, ACCUMULATOR_SIZE>& a,
-        const std::span<int16_t, ACCUMULATOR_SIZE>& w
+        const std::span<const int16_t, ACCUMULATOR_SIZE>& w
     ) {
         int16_t* __restrict ap = a.data();
         const int16_t* __restrict wp = w.data();
