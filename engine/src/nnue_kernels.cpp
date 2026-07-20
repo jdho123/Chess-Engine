@@ -157,4 +157,16 @@ namespace NNUE {
             ap[i] += wp[i];
         }
     }
+
+    void kernel_accumulator_subtraction(
+        std::array<int16_t, ACCUMULATOR_SIZE>& a,
+        const std::span<const int16_t, ACCUMULATOR_SIZE>& w
+    ) {
+        int16_t* __restrict ap = a.data();
+        const int16_t* __restrict wp = w.data();
+
+        for (size_t i = 0; i < ACCUMULATOR_SIZE; ++i) {
+            ap[i] -= wp[i];
+        }
+    }
 }

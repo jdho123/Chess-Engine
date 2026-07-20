@@ -31,4 +31,9 @@ namespace NNUE {
         std::array<int16_t, ACCUMULATOR_SIZE>& a,
         const std::span<const int16_t, ACCUMULATOR_SIZE>& w
     );
+
+    void kernel_accumulator_subtraction(
+        std::array<int16_t, ACCUMULATOR_SIZE>& a,
+        const std::span<const int16_t, ACCUMULATOR_SIZE>& w
+    );
 }
