@@ -28,7 +28,11 @@ NUMPY_TO_CPP = {
 
 
 def export_to_header(
-    output_path: str, template_path: str, arrays_dict: dict[str, np.ndarray]
+    header_output_path: str,
+    cpp_output_path: str,
+    header_template_path: str,
+    cpp_template_path: str,
+    arrays_dict: dict[str, np.ndarray],
 ):
     layer_data = []
 
@@ -48,8 +52,14 @@ def export_to_header(
             {"name": name, "size": len(raw_bytes), "chunks": chunks, "c_type": ctype}
         )
 
-    with open(template_path, "r", encoding="utf-8") as f:
+    with open(header_template_path, "r", encoding="utf-8") as f:
         template = Template(f.read())
 
-    with open(output_path, "w", encoding="utf-8") as f:
+    with open(header_output_path, "w", encoding="utf-8") as f:
+        f.write(template.render(layers=layer_data))
+
+    with open(cpp_template_path, "r", encoding="utf-8") as f:
+        template = Template(f.read())
+
+    with open(cpp_output_path, "w", encoding="utf-8") as f:
         f.write(template.render(layers=layer_data))

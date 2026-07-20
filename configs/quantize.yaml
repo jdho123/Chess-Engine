@@ -3,5 +3,8 @@ QB: 64
 
 model_path: "models/chess_eval.keras"
 
-output_path: "engine/include/nnue_weights.h"
-template_path: "quantize/nnue_weights.h.jinja"
+header_output_path: "engine/include/nnue_weights.h"
+header_template_path: "quantize/nnue_weights.h.jinja"
+
+cpp_output_path: "engine/include/nnue_weights.cpp"
+cpp_template_path: "quantize/nnue_weights.cpp.jinja"

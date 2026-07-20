@@ -1,0 +1,15 @@
+#include "weights.h" // Update this to match your actual header filename
+
+namespace NNUE {
+
+{% for layer in layers %}
+    alignas(64) const unsigned char {{ layer.name }}_bytes[{{ layer.size }}] = {
+        {% for chunk in layer.chunks %}
+        {{ chunk }},
+        {% endfor %}
+    };
+
+    const {{ layer.c_type }}* {{ layer.name }} = reinterpret_cast<const {{ layer.c_type }}*>({{ layer.name }}_bytes);
+
+{% endfor %}
+}

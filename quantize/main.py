@@ -46,7 +46,13 @@ def main(config_path: str):
         "output_bias": quantize(out_b, QA * QB, np.int32),
     }
 
-    export_to_header(config["output_path"], config["template_path"], arrays_dict)
+    export_to_header(
+        config["header_output_path"],
+        config["cpp_output_path"],
+        config["header_template_path"],
+        config["cpp_template_path"],
+        arrays_dict,
+    )
 
 
 if __name__ == "__main__":
