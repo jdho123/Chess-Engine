@@ -36,14 +36,14 @@ def main(config_path: str):
     out_w, out_b = output_dense.get_weights()
 
     arrays_dict = {
-        "accumulator_weights": quantize(acc_w.transpose(), QA, np.int16),
-        "accumulator_bias": quantize(acc_b, QA, np.int16),
-        "hidden_weights": quantize(hidden_w.transpose(), QB, np.int8),
-        "hidden_bias": quantize(hidden_b, QA * QB, np.int32),
-        "bucketed_weights": quantize(bucket_w.transpose(0, 2, 1), QB, np.int8),
-        "bucketed_bias": quantize(bucket_b, QA * QB, np.int32),
-        "output_weights": quantize(out_w.transpose(), QB, np.int8),
-        "output_bias": quantize(out_b, QA * QB, np.int32),
+        "ACCUMULATOR_WEIGHTS": quantize(acc_w.transpose(), QA, np.int16),
+        "ACCUMULATOR_BIAS": quantize(acc_b, QA, np.int16),
+        "HIDDEN_WEIGHTS": quantize(hidden_w.transpose(), QB, np.int8),
+        "HIDDEN_BIAS": quantize(hidden_b, QA * QB, np.int32),
+        "BUCKETED_WEIGHTS": quantize(bucket_w.transpose(0, 2, 1), QB, np.int8),
+        "BUCKETED_BIAS": quantize(bucket_b, QA * QB, np.int32),
+        "OUTPUT_WEIGHTS": quantize(out_w.transpose(), QB, np.int8),
+        "OUTPUT_BIAS": quantize(out_b, QA * QB, np.int32),
     }
 
     export_to_header(
