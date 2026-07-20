@@ -145,4 +145,13 @@ namespace NNUE {
         v128 = _mm_add_epi32(v128, _mm_shuffle_epi32(v128, _MM_SHUFFLE(2, 3, 0, 1)));
         y[0] = _mm_cvtsi128_si32(v128);
     }
+
+    void kernel_accumulator_addition(
+        std::array<int16_t, ACCUMULATOR_SIZE>& __restrict a,
+        const std::array<int16_t, ACCUMULATOR_SIZE>& __restrict w
+    ) {
+        for (size_t i = 0; i < ACCUMULATOR_SIZE; ++i) {
+            a[i] += w[i];
+        }
+    }
 }

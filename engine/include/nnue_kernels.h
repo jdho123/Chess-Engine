@@ -25,4 +25,9 @@ namespace NNUE {
         std::array<int8_t, HIDDEN_SIZE * OUTPUT_SIZE>& w_T,
         std::array<uint8_t, OUTPUT_SIZE>& y
     );
+
+    void kernel_accumulator_addition(
+        std::array<int16_t, ACCUMULATOR_SIZE>& a,
+        std::array<int16_t, ACCUMULATOR_SIZE>& w
+    );
 }
