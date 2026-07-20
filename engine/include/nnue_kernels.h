@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <array>
+#include <span>
 
 namespace NNUE {
     constexpr size_t ACCUMULATOR_SIZE = 512;
@@ -28,6 +29,6 @@ namespace NNUE {
 
     void kernel_accumulator_addition(
         std::array<int16_t, ACCUMULATOR_SIZE>& a,
-        std::array<int16_t, ACCUMULATOR_SIZE>& w
+        const std::span<int16_t, ACCUMULATOR_SIZE>& w
     );
 }
