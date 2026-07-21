@@ -1,11 +1,13 @@
 #pragma once
 #include <cstdint>
+#include <array>
+#include <span>
 
 namespace NNUE {
 
 {% for layer in layers %}
-    alignas(64) extern const unsigned char {{ layer.name }}_bytes[{{ layer.size }}];
-    extern const {{ layer.c_type }}* {{ layer.name }};
+    alignas(64) extern const std::array<uint8_t, {{ layer.size }}> {{ layer.name }}_bytes;
 
+    extern const std::span<const {{ layer.c_type }}, {{ layer.count }}> {{ layer.name }};
 {% endfor %}
 }

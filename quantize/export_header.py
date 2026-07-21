@@ -49,7 +49,13 @@ def export_to_header(
             raise TypeError(f"Invalid array type: {array.dtype}")
 
         layer_data.append(
-            {"name": name, "size": len(raw_bytes), "chunks": chunks, "c_type": ctype}
+            {
+                "name": name,
+                "size": len(raw_bytes),
+                "chunks": chunks,
+                "c_type": ctype,
+                "count": array.size,
+            }
         )
 
     with open(header_template_path, "r", encoding="utf-8") as f:

@@ -1,15 +1,15 @@
-#include "weights.h" // Update this to match your actual header filename
+#include "weights.h"
 
 namespace NNUE {
 
 {% for layer in layers %}
-    alignas(64) const unsigned char {{ layer.name }}_bytes[{{ layer.size }}] = {
+    alignas(64) const std::array<uint8_t, {{ layer.size }}> {{ layer.name }}_bytes = {
         {% for chunk in layer.chunks %}
         {{ chunk }},
         {% endfor %}
     };
 
-    const {{ layer.c_type }}* {{ layer.name }} = reinterpret_cast<const {{ layer.c_type }}*>({{ layer.name }}_bytes);
-
+    const std::span<const {{ layer.c_type }}, {{ layer.count }}> {{ layer.name }} =
+        reinterpret_cast<const {{ layer.c_type }}*>({{ layer.name }}_bytes.data());
 {% endfor %}
 }
