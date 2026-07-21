@@ -5,13 +5,14 @@
 #include <span>
 
 namespace NNUE {
-    constexpr size_t ACCUMULATOR_SIZE = 512;
+    constexpr size_t ACCUMULATOR_SIZE = 256;
+    constexpr size_t MERGED_SIZE = 2 * ACCUMULATOR_SIZE;
     constexpr size_t HIDDEN_SIZE = 32;
     constexpr size_t OUTPUT_SIZE = 1;
 
     void kernel_accumulator_hidden(
-        std::array<uint8_t, ACCUMULATOR_SIZE>& x, 
-        std::array<int8_t, ACCUMULATOR_SIZE * HIDDEN_SIZE>& w_T, 
+        std::array<uint8_t, MERGED_SIZE>& x, 
+        std::array<int8_t, MERGED_SIZE * HIDDEN_SIZE>& w_T, 
         std::array<uint8_t, HIDDEN_SIZE>& y
     );
 
@@ -35,5 +36,11 @@ namespace NNUE {
     void kernel_accumulator_subtraction(
         std::array<int16_t, ACCUMULATOR_SIZE>& a,
         const std::span<const int16_t, ACCUMULATOR_SIZE>& w
+    );
+
+    void kernel_accumulator_clipconcat(
+        std::array<int16_t, ACCUMULATOR_SIZE>& a,
+        std::array<int16_t, ACCUMULATOR_SIZE>& b,
+        std::array<uint8_t, MERGED_SIZE>& merged
     );
 }

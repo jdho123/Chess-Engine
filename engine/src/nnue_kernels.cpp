@@ -1,4 +1,5 @@
 #include "nnue_kernels.h"
+#include <immintrin.h>
 
 namespace NNUE {
     void kernel_accumulator_hidden(
@@ -168,5 +169,32 @@ namespace NNUE {
         for (size_t i = 0; i < ACCUMULATOR_SIZE; ++i) {
             ap[i] -= wp[i];
         }
+    }
+
+    inline void clip_avx2(const int16_t* __restrict src, uint8_t* __restrict dst, size_t n) {
+        size_t i = 0;
+
+        for (; i + 32 <= n; i += 32) {
+            __m256i v0 = _mm256_load_si256(reinterpret_cast<const __m256i*>(src + i));
+            __m256i v1 = _mm256_load_si256(reinterpret_cast<const __m256i*>(src + i + 16));
+
+            __m256i packed = _mm256_packus_epi16(v0, v1);
+            packed = _mm256_permute4x64_epi64(packed, 0xD8);
+
+            _mm256_store_si256(reinterpret_cast<__m256i*>(dst + i), packed);
+        }
+    }
+
+    void kernel_accumulator_clipconcat(
+        std::array<int16_t, ACCUMULATOR_SIZE>& a,
+        std::array<int16_t, ACCUMULATOR_SIZE>& b,
+        std::array<uint8_t, MERGED_SIZE>& merged
+    ) {
+        int16_t* __restrict ap = a.data();
+        int16_t* __restrict bp = b.data();
+        uint8_t* __restrict mp = merged.data();
+
+        clip_avx2(ap, mp, ACCUMULATOR_SIZE);
+        clip_avx2(bp, mp + ACCUMULATOR_SIZE, ACCUMULATOR_SIZE);
     }
 }
