@@ -1,10 +1,11 @@
 #include "nnue_kernels.h"
-#include <immintrin.h>
+#include <algorithm>
 
 namespace NNUE {
     void kernel_accumulator_hidden(
-        std::array<uint8_t, ACCUMULATOR_SIZE>& x, 
-        std::array<int8_t, ACCUMULATOR_SIZE * HIDDEN_SIZE>& w_T, 
+        std::array<uint8_t, MERGED_SIZE>& x, 
+        std::array<int8_t, MERGED_SIZE * HIDDEN_SIZE>& w_T,
+        std::array<int32_t, HIDDEN_SIZE>& b,
         std::array<uint8_t, HIDDEN_SIZE>& y
     ) {
         for (size_t j = 0; j < HIDDEN_SIZE - 2; j += 3) {
@@ -15,12 +16,12 @@ namespace NNUE {
             __m256i v_sum2_0 = _mm256_setzero_si256();
             __m256i v_sum2_1 = _mm256_setzero_si256();
 
-            for (size_t i = 0; i < ACCUMULATOR_SIZE; i += 64) {
+            for (size_t i = 0; i < MERGED_SIZE; i += 64) {
                 __m256i v_x0 = _mm256_load_si256((const __m256i*)&x[i]);
                 
-                __m256i v_A0_0 = _mm256_load_si256((const __m256i*)&w_T[j * ACCUMULATOR_SIZE + i]);
-                __m256i v_A1_0 = _mm256_load_si256((const __m256i*)&w_T[(j + 1) * ACCUMULATOR_SIZE + i]);
-                __m256i v_A2_0 = _mm256_load_si256((const __m256i*)&w_T[(j + 2) * ACCUMULATOR_SIZE + i]);
+                __m256i v_A0_0 = _mm256_load_si256((const __m256i*)&w_T[j * MERGED_SIZE + i]);
+                __m256i v_A1_0 = _mm256_load_si256((const __m256i*)&w_T[(j + 1) * MERGED_SIZE + i]);
+                __m256i v_A2_0 = _mm256_load_si256((const __m256i*)&w_T[(j + 2) * MERGED_SIZE + i]);
                 
                 v_sum0_0 = _mm256_dpbusd_epi32(v_sum0_0, v_x0, v_A0_0);
                 v_sum1_0 = _mm256_dpbusd_epi32(v_sum1_0, v_x0, v_A1_0);
@@ -28,9 +29,9 @@ namespace NNUE {
                 
                 __m256i v_x1 = _mm256_load_si256((const __m256i*)&x[i + 32]);
 
-                __m256i v_A0_1 = _mm256_load_si256((const __m256i*)&w_T[j * ACCUMULATOR_SIZE + i + 32]);
-                __m256i v_A1_1 = _mm256_load_si256((const __m256i*)&w_T[(j + 1) * ACCUMULATOR_SIZE + i + 32]);
-                __m256i v_A2_1 = _mm256_load_si256((const __m256i*)&w_T[(j + 2) * ACCUMULATOR_SIZE + i + 32]);
+                __m256i v_A0_1 = _mm256_load_si256((const __m256i*)&w_T[j * MERGED_SIZE + i + 32]);
+                __m256i v_A1_1 = _mm256_load_si256((const __m256i*)&w_T[(j + 1) * MERGED_SIZE + i + 32]);
+                __m256i v_A2_1 = _mm256_load_si256((const __m256i*)&w_T[(j + 2) * MERGED_SIZE + i + 32]);
                 
                 v_sum0_1 = _mm256_dpbusd_epi32(v_sum0_1, v_x1, v_A0_1);
                 v_sum1_1 = _mm256_dpbusd_epi32(v_sum1_1, v_x1, v_A1_1);
@@ -47,7 +48,9 @@ namespace NNUE {
             );
             v128_0 = _mm_add_epi32(v128_0, _mm_shuffle_epi32(v128_0, _MM_SHUFFLE(1, 0, 3, 2)));
             v128_0 = _mm_add_epi32(v128_0, _mm_shuffle_epi32(v128_0, _MM_SHUFFLE(2, 3, 0, 1)));
-            y[j] = _mm_cvtsi128_si32(v128_0);
+            int32_t sum0 = _mm_cvtsi128_si32(v128_0) + b[j];
+            sum0 = std::clamp(sum0, MIN, MAX);
+            y[j] = static_cast<uint8_t>(sum0);
 
             __m128i v128_1 = _mm_add_epi32(
                 _mm256_castsi256_si128(v_sum1),
@@ -55,7 +58,9 @@ namespace NNUE {
             );
             v128_1 = _mm_add_epi32(v128_1, _mm_shuffle_epi32(v128_1, _MM_SHUFFLE(1, 0, 3, 2)));
             v128_1 = _mm_add_epi32(v128_1, _mm_shuffle_epi32(v128_1, _MM_SHUFFLE(2, 3, 0, 1)));
-            y[j + 1] = _mm_cvtsi128_si32(v128_1);
+            int32_t sum1 = _mm_cvtsi128_si32(v128_1) + b[j + 1];
+            sum1 = std::clamp(sum1, MIN, MAX);
+            y[j + 1] = static_cast<uint8_t>(sum1);
 
             __m128i v128_2 = _mm_add_epi32(
                 _mm256_castsi256_si128(v_sum2),
@@ -63,19 +68,21 @@ namespace NNUE {
             );
             v128_2 = _mm_add_epi32(v128_2, _mm_shuffle_epi32(v128_2, _MM_SHUFFLE(1, 0, 3, 2)));
             v128_2 = _mm_add_epi32(v128_2, _mm_shuffle_epi32(v128_2, _MM_SHUFFLE(2, 3, 0, 1)));
-            y[j + 2] = _mm_cvtsi128_si32(v128_2);
+            int32_t sum2 = _mm_cvtsi128_si32(v128_2) + b[j + 2];
+            sum2 = std::clamp(sum2, MIN, MAX);
+            y[j + 2] = static_cast<uint8_t>(sum2);
         }
 
         for (size_t j = HIDDEN_SIZE - 2; j < HIDDEN_SIZE; ++j) { 
             __m256i v_sum0 = _mm256_setzero_si256();
             __m256i v_sum1 = _mm256_setzero_si256();
         
-            for (size_t i = 0; i < ACCUMULATOR_SIZE; i += 64) {
+            for (size_t i = 0; i < MERGED_SIZE; i += 64) {
                 __m256i v_x0 = _mm256_load_si256((const __m256i*)&x[i]);
                 __m256i v_x1 = _mm256_load_si256((const __m256i*)&x[i + 32]);
         
-                __m256i v_A0 = _mm256_load_si256((const __m256i*)&w_T[j * ACCUMULATOR_SIZE + i]);
-                __m256i v_A1 = _mm256_load_si256((const __m256i*)&w_T[j * ACCUMULATOR_SIZE + i + 32]);
+                __m256i v_A0 = _mm256_load_si256((const __m256i*)&w_T[j * MERGED_SIZE + i]);
+                __m256i v_A1 = _mm256_load_si256((const __m256i*)&w_T[j * MERGED_SIZE + i + 32]);
         
                 v_sum0 = _mm256_dpbusd_epi32(v_sum0, v_x0, v_A0);
                 v_sum1 = _mm256_dpbusd_epi32(v_sum1, v_x1, v_A1);
@@ -88,14 +95,17 @@ namespace NNUE {
             );
             v128 = _mm_add_epi32(v128, _mm_shuffle_epi32(v128, _MM_SHUFFLE(1, 0, 3, 2)));
             v128 = _mm_add_epi32(v128, _mm_shuffle_epi32(v128, _MM_SHUFFLE(2, 3, 0, 1)));
-            y[j] = _mm_cvtsi128_si32(v128);
+            int32_t sum = _mm_cvtsi128_si32(v128) + b[j];
+            sum = std::clamp(sum, MIN, MAX);
+            y[j] = static_cast<uint8_t>(sum);
         }
     }
 
     void kernel_hidden_hidden(
         std::array<uint8_t, HIDDEN_SIZE>& x,
         std::array<int8_t, HIDDEN_SIZE * HIDDEN_SIZE>& w_T,
-        std::array<uint8_t, HIDDEN_SIZE>& y
+        std::array<int32_t, HIDDEN_SIZE>& b,
+        std::array<uint32_t, HIDDEN_SIZE>& y
     ) {
         __m256i v_x = _mm256_load_si256((const __m256i*)&x);
         
@@ -115,7 +125,9 @@ namespace NNUE {
             );
             v128_1 = _mm_add_epi32(v128_1, _mm_shuffle_epi32(v128_1, _MM_SHUFFLE(1, 0, 3, 2)));
             v128_1 = _mm_add_epi32(v128_1, _mm_shuffle_epi32(v128_1, _MM_SHUFFLE(2, 3, 0, 1)));
-            y[j] = _mm_cvtsi128_si32(v128_1);
+            int32_t sum1 = _mm_cvtsi128_si32(v128_1) + b[j];
+            sum1 = std::clamp(sum1, MIN, MAX);
+            y[j] = static_cast<uint8_t>(sum1);
 
             __m128i v128_2 = _mm_add_epi32(
                 _mm256_castsi256_si128(v_sum2),
@@ -123,14 +135,17 @@ namespace NNUE {
             );
             v128_2 = _mm_add_epi32(v128_2, _mm_shuffle_epi32(v128_2, _MM_SHUFFLE(1, 0, 3, 2)));
             v128_2 = _mm_add_epi32(v128_2, _mm_shuffle_epi32(v128_2, _MM_SHUFFLE(2, 3, 0, 1)));
-            y[j] = _mm_cvtsi128_si32(v128_2);
+            int32_t sum2 = _mm_cvtsi128_si32(v128_2) + b[j + 1];
+            sum2 = std::clamp(sum2, MIN, MAX);
+            y[j + 1] = static_cast<uint8_t>(sum2);
         }
     }
 
     void kernel_hidden_output(
         std::array<uint8_t, HIDDEN_SIZE>& x,
         std::array<int8_t, HIDDEN_SIZE * OUTPUT_SIZE>& w_T,
-        std::array<uint8_t, OUTPUT_SIZE>& y
+        std::array<int32_t, OUTPUT_SIZE>& b,
+        std::array<uint32_t, OUTPUT_SIZE>& y
     ) {
         __m256i v_x = _mm256_load_si256((const __m256i*)&x);
         __m256i v_A = _mm256_load_si256((const __m256i*)&w_T);
@@ -144,29 +159,31 @@ namespace NNUE {
         );
         v128 = _mm_add_epi32(v128, _mm_shuffle_epi32(v128, _MM_SHUFFLE(1, 0, 3, 2)));
         v128 = _mm_add_epi32(v128, _mm_shuffle_epi32(v128, _MM_SHUFFLE(2, 3, 0, 1)));
-        y[0] = _mm_cvtsi128_si32(v128);
+        int32_t sum = _mm_cvtsi128_si32(v128) + b[0];
+        sum = std::clamp(sum, MIN, MAX);
+        y[0] = static_cast<uint8_t>(sum);
     }
 
     void kernel_accumulator_addition(
-        std::array<int16_t, ACCUMULATOR_SIZE>& a,
-        const std::span<const int16_t, ACCUMULATOR_SIZE>& w
+        std::array<int16_t, MERGED_SIZE>& a,
+        const std::span<const int16_t, MERGED_SIZE>& w
     ) {
         int16_t* __restrict ap = a.data();
         const int16_t* __restrict wp = w.data();
 
-        for (size_t i = 0; i < ACCUMULATOR_SIZE; ++i) {
+        for (size_t i = 0; i < MERGED_SIZE; ++i) {
             ap[i] += wp[i];
         }
     }
 
     void kernel_accumulator_subtraction(
-        std::array<int16_t, ACCUMULATOR_SIZE>& a,
-        const std::span<const int16_t, ACCUMULATOR_SIZE>& w
+        std::array<int16_t, MERGED_SIZE>& a,
+        const std::span<const int16_t, MERGED_SIZE>& w
     ) {
         int16_t* __restrict ap = a.data();
         const int16_t* __restrict wp = w.data();
 
-        for (size_t i = 0; i < ACCUMULATOR_SIZE; ++i) {
+        for (size_t i = 0; i < MERGED_SIZE; ++i) {
             ap[i] -= wp[i];
         }
     }
@@ -186,15 +203,15 @@ namespace NNUE {
     }
 
     void kernel_accumulator_clipconcat(
-        std::array<int16_t, ACCUMULATOR_SIZE>& a,
-        std::array<int16_t, ACCUMULATOR_SIZE>& b,
+        std::array<int16_t, MERGED_SIZE>& a,
+        std::array<int16_t, MERGED_SIZE>& b,
         std::array<uint8_t, MERGED_SIZE>& merged
     ) {
         int16_t* __restrict ap = a.data();
         int16_t* __restrict bp = b.data();
         uint8_t* __restrict mp = merged.data();
 
-        clip_avx2(ap, mp, ACCUMULATOR_SIZE);
-        clip_avx2(bp, mp + ACCUMULATOR_SIZE, ACCUMULATOR_SIZE);
+        clip_avx2(ap, mp, MERGED_SIZE);
+        clip_avx2(bp, mp + MERGED_SIZE, MERGED_SIZE);
     }
 }
