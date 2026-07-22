@@ -1,4 +1,4 @@
-#include "weights.h"
+#include "nnue_weights.h"
 
 namespace NNUE {
 
@@ -9,7 +9,8 @@ namespace NNUE {
         {% endfor %}
     };
 
-    const std::span<const {{ layer.c_type }}, {{ layer.count }}> {{ layer.name }} =
-        reinterpret_cast<const {{ layer.c_type }}*>({{ layer.name }}_bytes.data());
+    const std::span<const {{ layer.c_type }}, {{ layer.count }}> {{ layer.name }}(
+        reinterpret_cast<const {{ layer.c_type }}*>({{ layer.name }}_bytes.data()), {{layer.count}}
+    );
 {% endfor %}
 }
