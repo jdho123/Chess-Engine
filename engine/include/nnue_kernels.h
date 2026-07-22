@@ -14,23 +14,23 @@ namespace NNUE {
 
     void kernel_accumulator_hidden(
         std::array<uint8_t, MERGED_SIZE>& x, 
-        std::array<int8_t, MERGED_SIZE * HIDDEN_SIZE>& w_T,
-        std::array<int32_t, HIDDEN_SIZE>& b,
+        const std::span<const int8_t, MERGED_SIZE * HIDDEN_SIZE>& w_T,
+        const std::span<const int32_t, HIDDEN_SIZE>& b,
         std::array<uint8_t, HIDDEN_SIZE>& y
     );
 
     void kernel_hidden_hidden(
         std::array<uint8_t, HIDDEN_SIZE>& x,
-        std::array<int8_t, HIDDEN_SIZE * HIDDEN_SIZE>& w_T,
-        std::array<int32_t, HIDDEN_SIZE>& b,
+        const std::span<const int8_t, HIDDEN_SIZE * HIDDEN_SIZE>& w_T,
+        const std::span<const int32_t, HIDDEN_SIZE>& b,
         std::array<uint8_t, HIDDEN_SIZE>& y
     );
 
     void kernel_hidden_output(
         std::array<uint8_t, HIDDEN_SIZE>& x,
-        std::array<int8_t, HIDDEN_SIZE * OUTPUT_SIZE>& w_T,
-        std::array<int32_t, OUTPUT_SIZE>& b,
-        std::array<uint8_t, OUTPUT_SIZE>& y
+        const std::span<const int8_t, HIDDEN_SIZE * OUTPUT_SIZE>& w_T,
+        const std::span<const int32_t, OUTPUT_SIZE>& b,
+        std::array<int32_t, OUTPUT_SIZE>& y
     );
 
     void kernel_accumulator_addition(
