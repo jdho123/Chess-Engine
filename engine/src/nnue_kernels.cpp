@@ -189,9 +189,14 @@ namespace NNUE {
     inline void clip_avx2(const int16_t* __restrict src, uint8_t* __restrict dst, size_t n) {
         size_t i = 0;
 
+        const __m256i max_val = _mm256_set1_epi16(MAX);
+
         for (; i + 32 <= n; i += 32) {
             __m256i v0 = _mm256_load_si256(reinterpret_cast<const __m256i*>(src + i));
             __m256i v1 = _mm256_load_si256(reinterpret_cast<const __m256i*>(src + i + 16));
+
+            v0 = _mm256_min_epi16(v0, max_val);
+            v1 = _mm256_min_epi16(v1, max_val);
 
             __m256i packed = _mm256_packus_epi16(v0, v1);
             packed = _mm256_permute4x64_epi64(packed, 0xD8);

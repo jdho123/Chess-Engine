@@ -10,7 +10,7 @@ namespace NNUE {
     constexpr size_t HIDDEN_SIZE = 32;
     constexpr size_t OUTPUT_SIZE = 1;
     constexpr int32_t MIN = 0;
-    constexpr int32_t MAX = 255;
+    constexpr int32_t MAX = 127;
 
     void kernel_accumulator_hidden(
         std::array<uint8_t, MERGED_SIZE>& x, 
