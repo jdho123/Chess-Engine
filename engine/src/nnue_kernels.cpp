@@ -49,6 +49,7 @@ namespace NNUE {
             v128_0 = _mm_add_epi32(v128_0, _mm_shuffle_epi32(v128_0, _MM_SHUFFLE(1, 0, 3, 2)));
             v128_0 = _mm_add_epi32(v128_0, _mm_shuffle_epi32(v128_0, _MM_SHUFFLE(2, 3, 0, 1)));
             int32_t sum0 = _mm_cvtsi128_si32(v128_0) + b[j];
+            sum0 >>= SCALE_SHIFT_BITS;
             sum0 = std::clamp(sum0, MIN, MAX);
             y[j] = static_cast<uint8_t>(sum0);
 
@@ -59,6 +60,7 @@ namespace NNUE {
             v128_1 = _mm_add_epi32(v128_1, _mm_shuffle_epi32(v128_1, _MM_SHUFFLE(1, 0, 3, 2)));
             v128_1 = _mm_add_epi32(v128_1, _mm_shuffle_epi32(v128_1, _MM_SHUFFLE(2, 3, 0, 1)));
             int32_t sum1 = _mm_cvtsi128_si32(v128_1) + b[j + 1];
+            sum1 >>= SCALE_SHIFT_BITS;
             sum1 = std::clamp(sum1, MIN, MAX);
             y[j + 1] = static_cast<uint8_t>(sum1);
 
@@ -69,6 +71,7 @@ namespace NNUE {
             v128_2 = _mm_add_epi32(v128_2, _mm_shuffle_epi32(v128_2, _MM_SHUFFLE(1, 0, 3, 2)));
             v128_2 = _mm_add_epi32(v128_2, _mm_shuffle_epi32(v128_2, _MM_SHUFFLE(2, 3, 0, 1)));
             int32_t sum2 = _mm_cvtsi128_si32(v128_2) + b[j + 2];
+            sum2 >>= SCALE_SHIFT_BITS;
             sum2 = std::clamp(sum2, MIN, MAX);
             y[j + 2] = static_cast<uint8_t>(sum2);
         }
@@ -96,6 +99,7 @@ namespace NNUE {
             v128 = _mm_add_epi32(v128, _mm_shuffle_epi32(v128, _MM_SHUFFLE(1, 0, 3, 2)));
             v128 = _mm_add_epi32(v128, _mm_shuffle_epi32(v128, _MM_SHUFFLE(2, 3, 0, 1)));
             int32_t sum = _mm_cvtsi128_si32(v128) + b[j];
+            sum >>= SCALE_SHIFT_BITS;
             sum = std::clamp(sum, MIN, MAX);
             y[j] = static_cast<uint8_t>(sum);
         }
@@ -126,6 +130,7 @@ namespace NNUE {
             v128_1 = _mm_add_epi32(v128_1, _mm_shuffle_epi32(v128_1, _MM_SHUFFLE(1, 0, 3, 2)));
             v128_1 = _mm_add_epi32(v128_1, _mm_shuffle_epi32(v128_1, _MM_SHUFFLE(2, 3, 0, 1)));
             int32_t sum1 = _mm_cvtsi128_si32(v128_1) + b[j];
+            sum1 >>= SCALE_SHIFT_BITS;
             sum1 = std::clamp(sum1, MIN, MAX);
             y[j] = static_cast<uint8_t>(sum1);
 
@@ -136,6 +141,7 @@ namespace NNUE {
             v128_2 = _mm_add_epi32(v128_2, _mm_shuffle_epi32(v128_2, _MM_SHUFFLE(1, 0, 3, 2)));
             v128_2 = _mm_add_epi32(v128_2, _mm_shuffle_epi32(v128_2, _MM_SHUFFLE(2, 3, 0, 1)));
             int32_t sum2 = _mm_cvtsi128_si32(v128_2) + b[j + 1];
+            sum2 >>= SCALE_SHIFT_BITS;
             sum2 = std::clamp(sum2, MIN, MAX);
             y[j + 1] = static_cast<uint8_t>(sum2);
         }

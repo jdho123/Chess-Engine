@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <array>
 #include <span>
+#include "nnue_constants.h"
 
 namespace NNUE {
     constexpr size_t ACCUMULATOR_SIZE = 256;
