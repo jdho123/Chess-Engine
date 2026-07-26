@@ -1,0 +1,9 @@
+If:
+  PathMatch: .*/nnue_weights\.cpp
+
+Index:
+  Background: Skip
+
+Diagnostics:
+
+  Suppress: '*'
