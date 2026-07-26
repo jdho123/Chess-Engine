@@ -2,6 +2,7 @@
 #include "nnue.h"
 #include "chess.hpp"
 #include "nnue_weights.h"
+#include "nnue_constants.h"
 
 
 NNUE::PieceUpdates NNUE::PieceUpdates::from_move(const chess::Board& board, chess::Move move) {

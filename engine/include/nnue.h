@@ -2,7 +2,6 @@
 #include <array>
 #include <cstdint>
 #include "chess.hpp"
-#include "nnue_constants.h"
 #include "nnue_kernels.h"
 
 namespace NNUE {
