@@ -291,3 +291,8 @@ Testing/
 data/
 logs/
 models/
+
+# generated files
+nnue_constants.h
+nnue_weights.h
+nnue_weights.cpp
