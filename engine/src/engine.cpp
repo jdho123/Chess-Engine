@@ -47,6 +47,8 @@ void UCIEngine::handle_position(std::istringstream& iss) {
             board.makeMove(m);
         }
     }
+
+    nnue.reset(board);
 }
 
 void UCIEngine::handle_go(std::istringstream& iss) {
@@ -106,6 +108,7 @@ void UCIEngine::run() {
             std::cout << "readyok" << std::endl;
         } else if (token == "ucinewgame") {
             board = chess::Board();
+            nnue.reset(board);
         } else if (token == "position") {
             handle_position(iss);
         } else if (token == "go") {
