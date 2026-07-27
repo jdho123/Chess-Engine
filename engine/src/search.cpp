@@ -209,22 +209,28 @@ int quiescence_search(chess::Board& board, NNUE::NNUE& nnue, int ply, int alpha,
 
     bool in_check = board.inCheck();
 
+    int best_value;
+
     if (in_check) {
         chess::movegen::legalmoves(moves, board);
 
         if (moves.empty()) {
             return -NNUE::MATE_VALUE + ply;
         }
+
+        best_value = -NNUE::MATE_VALUE - 1;
     }
     else {
         int static_score = nnue.evaluate(board);
     
         if (static_score >= beta) {
-            return beta;
+            return static_score;
         }
         if (static_score > alpha) {
             alpha = static_score;
         }
+
+        best_value = static_score;
 
         chess::movegen::legalmoves<chess::movegen::MoveGenType::CAPTURE>(moves, board);
     }
@@ -237,18 +243,18 @@ int quiescence_search(chess::Board& board, NNUE::NNUE& nnue, int ply, int alpha,
         nnue.unmake_move(board, m);
 
         if (ctx.stopped) {
-            return alpha;
+            return best_value;
         }
 
         if (value >= beta) {
-            return beta;
+            return best_value;
         }
         if (value > alpha) {
             alpha = value;
         }
     }
 
-    return alpha;
+    return best_value;
 }
 
 int piece_value(chess::PieceType pt) {
