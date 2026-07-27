@@ -148,7 +148,6 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& 
             }
 
             if (score <= alpha) {
-                beta = (alpha + beta) / 2;
                 window *= 2;
                 alpha = std::max(alpha - window, -NNUE::MATE_VALUE - 1);
                 continue;
@@ -186,6 +185,8 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& 
 }
 
 int quiescence_search(chess::Board& board, NNUE::NNUE& nnue, int ply, int alpha, int beta, SearchContext& ctx) {
+    constexpr int MAX_PLY = 64;
+
     ctx.nodes++;
     if ((ctx.nodes & 2047) == 0) {
         if (ctx.clock->expired()) {
@@ -194,6 +195,10 @@ int quiescence_search(chess::Board& board, NNUE::NNUE& nnue, int ply, int alpha,
     }
     if (ctx.stopped) {
         return 0;
+    }
+
+    if (ply >= MAX_PLY) {
+        return nnue.evaluate(board);
     }
 
     chess::Movelist moves;
@@ -228,7 +233,7 @@ int quiescence_search(chess::Board& board, NNUE::NNUE& nnue, int ply, int alpha,
         nnue.unmake_move(board, m);
 
         if (ctx.stopped) {
-            return value;
+            return alpha;
         }
 
         if (value >= beta) {
