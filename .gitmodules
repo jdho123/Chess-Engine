@@ -1,3 +1,9 @@
 [submodule "engine/third_party/chess"]
 	path = engine/third_party/chess
 	url = https://github.com/Disservin/chess-library.git
+[submodule "third_party/doctest"]
+	path = third_party/doctest
+	url = https://github.com/doctest/doctest.git
+[submodule "engine/third_party/doctest"]
+	path = engine/third_party/doctest
+	url = https://github.com/doctest/doctest.git
