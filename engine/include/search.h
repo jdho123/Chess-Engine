@@ -14,6 +14,8 @@ struct SearchResult {
     int depth_reached;
 };
 
+constexpr int MAX_PLY = 64;
+
 int search(chess::Board& board, NNUE::NNUE& nnue, int depth, int root_depth, int alpha, int beta, SearchContext& ctx);
 
 SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& clock, int max_depth);

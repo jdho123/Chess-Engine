@@ -21,7 +21,13 @@ int search(
         return 0;
     }
 
-    if (depth == 0) {
+    if (ply >= MAX_PLY) {
+        return quiescence_search(board, nnue, ply + 1, alpha, beta, ctx);
+    }
+
+    bool in_check = board.inCheck();
+
+    if (depth <= 0 && !in_check) {
         return quiescence_search(board, nnue, ply + 1, alpha, beta, ctx);
     }
 
@@ -185,8 +191,6 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& 
 }
 
 int quiescence_search(chess::Board& board, NNUE::NNUE& nnue, int ply, int alpha, int beta, SearchContext& ctx) {
-    constexpr int MAX_PLY = 64;
-
     ctx.nodes++;
     if ((ctx.nodes & 2047) == 0) {
         if (ctx.clock->expired()) {
