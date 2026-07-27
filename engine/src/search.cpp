@@ -52,10 +52,62 @@ int search(
         nnue.unmake_move(board, m);
 
         if (ctx.stopped) {
-            return value;
+            return best_value;
         }
 
         best_value = std::max(best_value, value);
+        alpha = std::max(alpha, best_value);
+        if (alpha >= beta) {
+            break;
+        }
+    }
+    return best_value;
+}
+
+int search_root(chess::Board& board, NNUE::NNUE& nnue, int depth, int alpha, int beta, SearchContext& ctx, chess::Move& best_move) {
+    chess::Movelist moves;
+    chess::movegen::legalmoves(moves, board);
+
+    if (moves.empty()) {
+        if (board.inCheck()) {
+            return -NNUE::MATE_VALUE;
+        }
+        return 0;
+    }
+
+    order_moves(board, moves);
+
+    if (best_move != chess::Move::NO_MOVE) {
+        auto it = std::find(moves.begin(), moves.end(), best_move);
+        if (it != moves.end()) {
+            std::rotate(moves.begin(), it, it + 1);
+        }
+    }
+
+    best_move = moves[0];
+    int best_value = -NNUE::MATE_VALUE - 1;
+
+    for (chess::Move m : moves) {
+        nnue.make_move(board, m);
+        int value = -search(
+            board,
+            nnue,
+            depth - 1,
+            1,
+            -beta,
+            -alpha,
+            ctx
+        );
+        nnue.unmake_move(board, m);
+
+        if (ctx.stopped) {
+            break;
+        }
+
+        if (value > best_value) {
+            best_value = value;
+            best_move = m;
+        }
         alpha = std::max(alpha, best_value);
         if (alpha >= beta) {
             break;
@@ -69,47 +121,45 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& 
     result.best_move = chess::Move::NO_MOVE;
     int last_completed_score = 0;
 
+    chess::Move best_move = chess::Move::NO_MOVE;
+
     for (int depth = 1; depth <= max_depth; depth++) {
         SearchContext ctx;
         ctx.clock = &clock;
 
-        chess::Movelist moves;
-        chess::movegen::legalmoves(moves, board);
-        order_moves(board, moves);
+        int window = 25;
+        int alpha, beta;
 
-        if (result.best_move != chess::Move::NO_MOVE) {
-            auto it = std::find(moves.begin(), moves.end(), result.best_move);
-            if (it != moves.end()) {
-                std::rotate(moves.begin(), it, it + 1);
-            }
+        if (depth <= 4) {
+            alpha = -NNUE::MATE_VALUE - 1;
+            beta = NNUE::MATE_VALUE + 1;
+        } else {
+            alpha = last_completed_score - window;
+            beta = last_completed_score + window;
         }
 
-        chess::Move best_move = moves[0];
-        int best_value = -NNUE::MATE_VALUE - 1;
-        int alpha = -NNUE::MATE_VALUE - 1, beta = NNUE::MATE_VALUE + 1;
+        int score;
 
-        for (chess::Move m : moves) {
-            nnue.make_move(board, m);
-            int value = -search(
-                board,
-                nnue,
-                depth - 1,
-                1,
-                -beta,
-                -alpha,
-                ctx
-            );
-            nnue.unmake_move(board, m);
+        while (true) {
+            score = search_root(board, nnue, depth, alpha, beta, ctx, best_move);
 
             if (ctx.stopped) {
                 break;
             }
 
-            if (value > best_value) {
-                best_value = value;
-                best_move = m;
+            if (score <= alpha) {
+                beta = (alpha + beta) / 2;
+                window *= 2;
+                alpha = std::max(alpha - window, -NNUE::MATE_VALUE - 1);
+                continue;
             }
-            alpha = std::max(alpha, best_value);
+            if (score >= beta) {
+                window *= 2;
+                beta = std::min(beta + window, NNUE::MATE_VALUE + 1);
+                continue;
+            }
+
+            break;
         }
 
         if (ctx.stopped) {
@@ -117,9 +167,9 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& 
         }
 
         result.best_move = best_move;
-        result.score = best_value;
+        result.score = score;
         result.depth_reached = depth;
-        last_completed_score = best_value;
+        last_completed_score = score;
 
         std::cout << "info depth " << depth 
                   << " score cp "  << last_completed_score

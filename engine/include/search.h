@@ -14,9 +14,11 @@ struct SearchResult {
     int depth_reached;
 };
 
-int search(chess::Board& board, NNUE::NNUE& nnue, int depth, int root_depth, int alpha, int beta, bool maximizing_player);
+int search(chess::Board& board, NNUE::NNUE& nnue, int depth, int root_depth, int alpha, int beta, SearchContext& ctx);
 
 SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& clock, int max_depth);
+
+int search_root(chess::Board& board, NNUE::NNUE& nnue, int depth, int alpha, int beta, SearchContext& ctx, chess::Move& best_move);
 
 int quiescence_search(chess::Board& board, NNUE::NNUE& nnue, int ply, int alpha, int beta, SearchContext& ctx);
 
