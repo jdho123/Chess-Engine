@@ -185,8 +185,8 @@ void NNUE::NNUE::make_move(chess::Board& board, chess::Move move) {
     accumulator_stack[ply].computed[0] = false;
     accumulator_stack[ply].computed[1] = false;
 
-    accumulator_stack[ply].needs_refresh[0] = updates.king_move;
-    accumulator_stack[ply].needs_refresh[1] = updates.king_move;
+    accumulator_stack[ply].needs_refresh[0] = updates.king_move && (updates.king_color == 0);
+    accumulator_stack[ply].needs_refresh[1] = updates.king_move && (updates.king_color == 1);
 
     ply++;
     board.makeMove(move);
@@ -261,7 +261,7 @@ void NNUE::NNUE::compute_accumulators(const chess::Board& board) {
 int NNUE::NNUE::evaluate(const chess::Board& board) {
     compute_accumulators(board);
 
-    Accumulator current_acc = accumulator_stack[ply - 1];
+    Accumulator& current_acc = accumulator_stack[ply - 1];
 
     if (board.sideToMove() == chess::Color::WHITE) {
         kernel_accumulator_clipconcat(current_acc.white, current_acc.black, l1);
