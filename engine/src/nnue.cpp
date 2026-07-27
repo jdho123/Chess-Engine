@@ -185,10 +185,8 @@ void NNUE::NNUE::make_move(chess::Board& board, chess::Move move) {
     accumulator_stack[ply].computed[0] = false;
     accumulator_stack[ply].computed[1] = false;
 
-    if (updates.king_move) {
-        accumulator_stack[ply].needs_refresh[0] = true;
-        accumulator_stack[ply].needs_refresh[1] = true;
-    }
+    accumulator_stack[ply].needs_refresh[0] = updates.king_move;
+    accumulator_stack[ply].needs_refresh[1] = updates.king_move;
 
     ply++;
     board.makeMove(move);
