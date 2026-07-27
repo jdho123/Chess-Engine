@@ -174,7 +174,7 @@ template void NNUE::Accumulator::compute_half<1>(const Accumulator&);
 
 
 NNUE::NNUE::NNUE(const chess::Board& board) {
-    accumulator_stack[ply++].refresh(board, Accumulator::Color::BOTH);
+    reset(board);
 }
 
 
@@ -318,4 +318,14 @@ int NNUE::NNUE::get_bucket_idx(const chess::Board& board) {
     int standard_idx = std::clamp(numerator / denominator, 0, NORMAL_BUCKETS - 1);
     
     return standard_idx;
+}
+
+void NNUE::NNUE::reset(const chess::Board& board) {
+    ply = 0;
+    Accumulator& root = accumulator_stack[0];
+    root.computed[0] = root.computed[1] = false;
+    root.needs_refresh[0] = root.needs_refresh[1] = false;
+    root.updates = PieceUpdates{};
+    root.refresh(board, Accumulator::Color::BOTH);
+    ply = 1;
 }

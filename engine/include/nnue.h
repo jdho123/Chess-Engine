@@ -53,6 +53,7 @@ namespace NNUE {
         void make_move(chess::Board& board, chess::Move move);
         void unmake_move(chess::Board& board, chess::Move move);
         int evaluate(const chess::Board& board);
+        void reset(const chess::Board& board);
     
     private:
         static constexpr int MAX_PLY = 256;
