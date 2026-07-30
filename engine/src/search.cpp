@@ -246,6 +246,7 @@ int quiescence_search(chess::Board& board, NNUE::NNUE& nnue, int ply, int alpha,
             return best_value;
         }
 
+        best_value = std::max(best_value, value);
         if (value >= beta) {
             return best_value;
         }
