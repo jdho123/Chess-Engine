@@ -82,8 +82,10 @@ void UCIEngine::handle_go(std::istringstream& iss) {
 
     clock.begin(budget);
 
+    tt.new_search();
+
     search_thread = std::thread([this, max_depth]() {
-        SearchResult result = find_best_move(board, nnue, clock, max_depth);
+        SearchResult result = find_best_move(board, nnue, clock, max_depth, tt);
         std::cout << "bestmove " << chess::uci::moveToUci(result.best_move) << std::endl;
     });
 }
@@ -109,6 +111,7 @@ void UCIEngine::run() {
         } else if (token == "ucinewgame") {
             board = chess::Board();
             nnue.reset(board);
+            tt.clear();
         } else if (token == "position") {
             handle_position(iss);
         } else if (token == "go") {

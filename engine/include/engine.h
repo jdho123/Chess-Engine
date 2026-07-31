@@ -4,6 +4,7 @@
 #include "chess.hpp"
 #include "clock.h"
 #include "nnue.h"
+#include "search.h"
 
 class UCIEngine {
 public:
@@ -15,6 +16,7 @@ private:
     chess::Board board;
     NNUE::NNUE nnue;
     SearchClock clock;
+    TranspositionTable tt{1024};
     std::thread search_thread;
 
     void handle_uci() const;
