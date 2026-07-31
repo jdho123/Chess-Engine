@@ -112,6 +112,44 @@ int search(
         return quiescence_search(board, nnue, ply + 1, alpha, beta, ctx, tt);
     }
 
+    if (
+        !in_check &&
+        depth >= 3 &&
+        !ctx.last_move_null &&
+        ply > 0 &&
+        beta < NNUE::MATE_VALUE - MAX_PLY &&
+        alpha > -NNUE::MATE_VALUE + MAX_PLY &&
+        has_non_pawn_material(board, board.sideToMove())
+    ) {
+        int R = 3 + depth / 6;
+        int reduced_depth = depth - 1 - R;
+
+        board.makeNullMove();
+        ctx.last_move_null = true;
+
+        int null_value = -search(
+            board,
+            nnue,
+            reduced_depth,
+            ply + 1,
+            -beta,
+            -beta + 1,
+            ctx,
+            tt
+        );
+
+        ctx.last_move_null = false;
+        board.unmakeNullMove();
+
+        if (ctx.stopped) {
+            return 0;
+        }
+
+        if (null_value >= beta) {
+            return null_value;
+        }
+    }
+
     chess::Movelist moves;
     chess::movegen::legalmoves(moves, board);
     order_moves(board, moves, best_move);
@@ -427,4 +465,11 @@ void order_moves(const chess::Board& board, chess::Movelist& moves, chess::Move&
             std::rotate(moves.begin(), it, it + 1);
         }
     }
+}
+
+bool has_non_pawn_material(const chess::Board& board, chess::Color side) {
+    chess::Bitboard pieces = board.us(side);
+    pieces ^= board.pieces(chess::PieceType::PAWN, side);
+    pieces ^= board.pieces(chess::PieceType::KING, side);
+    return pieces != 0;
 }

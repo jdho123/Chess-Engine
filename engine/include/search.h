@@ -7,6 +7,7 @@ struct SearchContext {
     SearchClock* clock;
     uint64_t nodes = 0;
     bool stopped = false;
+    bool last_move_null = false;
 };
 
 struct SearchResult {
@@ -63,3 +64,5 @@ int piece_value(chess::PieceType pt);
 int score_move(const chess::Board& board, const chess::Move& move);
 
 void order_moves(const chess::Board& board, chess::Movelist& moves, chess::Move& best_move);
+
+bool has_non_pawn_material(const chess::Board& board, chess::Color side);
