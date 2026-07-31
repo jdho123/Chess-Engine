@@ -106,13 +106,9 @@ int search(
         }
     }
 
-    if (ply >= MAX_PLY) {
-        return quiescence_search(board, nnue, ply + 1, alpha, beta, ctx, tt);
-    }
-
     bool in_check = board.inCheck();
 
-    if (depth <= 0 && !in_check) {
+    if (ply >= MAX_PLY || (depth <= 0 && !in_check)) {
         return quiescence_search(board, nnue, ply + 1, alpha, beta, ctx, tt);
     }
 
