@@ -3,6 +3,19 @@
 #include "nnue_constants.h"
 #include <cstdint>
 
+void SearchContext::clear_killers() {
+    for (int ply = 0; ply < MAX_PLY; ++ply) {
+        killer_moves[ply][0] = chess::Move::NO_MOVE;
+        killer_moves[ply][1] = chess::Move::NO_MOVE;
+    }
+}
+
+void SearchContext::store_killer(chess::Move move, int ply) {
+    if (move == killer_moves[ply][0]) return;
+    killer_moves[ply][1] = killer_moves[ply][0];
+    killer_moves[ply][0] = move;
+}
+
 TranspositionTable::TranspositionTable(size_t size_mb) {
     resize(size_mb);
 }
@@ -152,7 +165,7 @@ int search(
 
     chess::Movelist moves;
     chess::movegen::legalmoves(moves, board);
-    order_moves(board, moves, best_move);
+    order_moves(board, moves, best_move, ply, ctx);
 
     if (moves.empty()) {
         if (board.inCheck()) {
@@ -188,6 +201,7 @@ int search(
         }
         alpha = std::max(alpha, best_value);
         if (alpha >= beta) {
+            ctx.store_killer(m, ply);
             break;
         }
     }
@@ -221,9 +235,12 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& 
     chess::Move best_move = chess::Move::NO_MOVE;
     int last_completed_score = 0;
 
+    SearchContext ctx;
+    ctx.clock = &clock;
+    ctx.clear_killers();
+
     for (int depth = 1; depth <= max_depth; depth++) {
-        SearchContext ctx;
-        ctx.clock = &clock;
+        ctx.last_move_null = false;
 
         int window = 25;
         int alpha = -NNUE::MATE_VALUE - 1;
@@ -237,7 +254,7 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& 
         int value = last_completed_score;
 
         while (true) {
-            order_moves(board, moves, best_move);
+            order_moves(board, moves, best_move, 0, ctx);
 
             chess::Move iter_best_move = chess::Move::NO_MOVE;
             int best_value = -NNUE::MATE_VALUE - 1;
@@ -267,6 +284,7 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& 
                 }
                 alpha = std::max(alpha, best_value);
                 if (alpha >= beta) {
+                    ctx.store_killer(m, 0);
                     break;
                 }
             }
@@ -392,7 +410,7 @@ int quiescence_search(
     }
 
     chess::Move best_move = chess::Move::NO_MOVE;
-    order_moves(board, moves, tt_move);
+    order_moves(board, moves, tt_move, ply, ctx);
     int original_alpha = alpha;
 
     for (chess::Move m : moves) {
@@ -437,7 +455,7 @@ int piece_value(chess::PieceType pt) {
     }
 }
 
-int score_move(const chess::Board& board, const chess::Move& move) {
+int score_move(const chess::Board& board, const chess::Move& move, int ply, SearchContext& ctx) {
     int score = 0;
 
     if (board.isCapture(move)) {
@@ -451,20 +469,24 @@ int score_move(const chess::Board& board, const chess::Move& move) {
         score += 9000 + piece_value(move.promotionType());
     }
 
+    if (move == ctx.killer_moves[ply][0]) return 8000;
+    if (move == ctx.killer_moves[ply][1]) return 7000;
+
     return score;
 }
 
-void order_moves(const chess::Board& board, chess::Movelist& moves, chess::Move& best_move) {
-    std::sort(moves.begin(), moves.end(), [&board](const chess::Move& a, const chess::Move& b) {
-        return score_move(board, a) > score_move(board, b);
-    });
-
-    if (best_move != chess::Move::NO_MOVE) {
-        auto it = std::find(moves.begin(), moves.end(), best_move);
-        if (it != moves.end()) {
-            std::rotate(moves.begin(), it, it + 1);
+void order_moves(const chess::Board& board, chess::Movelist& moves, chess::Move& best_move, int ply, SearchContext& ctx) {
+    for (chess::Move& m : moves) {
+        if (m == best_move) {
+            m.setScore(30000);
+        } else {
+            m.setScore(score_move(board, m, ply, ctx));
         }
     }
+
+    std::sort(moves.begin(), moves.end(), [&board](const chess::Move& a, const chess::Move& b) {
+        return a.score() > b.score();
+    });
 }
 
 bool has_non_pawn_material(const chess::Board& board, chess::Color side) {

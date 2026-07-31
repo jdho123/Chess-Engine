@@ -2,12 +2,20 @@
 #include "chess.hpp"
 #include "clock.h"
 #include "nnue.h"
+#include "nnue_kernels.h"
+
+constexpr int MAX_PLY = 64;
 
 struct SearchContext {
     SearchClock* clock;
     uint64_t nodes = 0;
     bool stopped = false;
     bool last_move_null = false;
+
+    chess::Move killer_moves[MAX_PLY][2];
+
+    void clear_killers();
+    void store_killer(chess::Move, int ply);
 };
 
 struct SearchResult {
@@ -51,8 +59,6 @@ private:
     uint8_t age = 0;
 };
 
-constexpr int MAX_PLY = 64;
-
 int search(chess::Board& board, NNUE::NNUE& nnue, int depth, int ply, int alpha, int beta, SearchContext& ctx, TranspositionTable& tt);
 
 SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& clock, int max_depth, TranspositionTable& tt);
@@ -61,8 +67,8 @@ int quiescence_search(chess::Board& board, NNUE::NNUE& nnue, int ply, int alpha,
 
 int piece_value(chess::PieceType pt);
 
-int score_move(const chess::Board& board, const chess::Move& move);
+int score_movescore_move(const chess::Board& board, const chess::Move& move, int ply, SearchContext& ctx);
 
-void order_moves(const chess::Board& board, chess::Movelist& moves, chess::Move& best_move);
+void order_moves(const chess::Board& board, chess::Movelist& moves, chess::Move& best_move, int ply, SearchContext& ctx);
 
 bool has_non_pawn_material(const chess::Board& board, chess::Color side);
