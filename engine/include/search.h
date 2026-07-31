@@ -56,8 +56,6 @@ int search(chess::Board& board, NNUE::NNUE& nnue, int depth, int ply, int alpha,
 
 SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& clock, int max_depth, TranspositionTable& tt);
 
-int search_root(chess::Board& board, NNUE::NNUE& nnue, int depth, int alpha, int beta, SearchContext& ctx, chess::Move& best_move, TranspositionTable& tt);
-
 int quiescence_search(chess::Board& board, NNUE::NNUE& nnue, int ply, int alpha, int beta, SearchContext& ctx, TranspositionTable& tt);
 
 int piece_value(chess::PieceType pt);

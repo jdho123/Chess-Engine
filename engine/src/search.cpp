@@ -170,141 +170,95 @@ int search(
     return best_value;
 }
 
-int search_root(
-    chess::Board& board, 
-    NNUE::NNUE& nnue, 
-    int depth, 
-    int alpha, 
-    int beta, 
-    SearchContext& ctx,
-    chess::Move& best_move,
-    TranspositionTable& tt
-) {
-    ctx.nodes++;
-    if ((ctx.nodes & 2047) == 0) {
-        if (ctx.clock->expired()) {
-            ctx.stopped = true;
-            return 0;
-        }
-    }
-    if (ctx.stopped) {
-        return 0;
-    }
-
-    uint64_t zobrist_hash = board.zobrist();
-    TTEntry entry;
-
-    if (tt.probe(zobrist_hash, entry)) {
-        best_move = entry.move;
-        if (entry.depth >= depth) {
-            int tt_value = entry.score;
-            if (entry.flag == TTFlag::EXACT) {
-                return tt_value;
-            } else if (entry.flag == TTFlag::LOWER && tt_value >= beta) {
-                return tt_value;
-            } else if (entry.flag == TTFlag::UPPER && tt_value <= alpha) {
-                return tt_value;
-            }
-        }
-    }
+SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& clock, int max_depth, TranspositionTable& tt) {
+    SearchResult result;
+    result.best_move = chess::Move::NO_MOVE;
+    result.score = 0;
+    result.depth_reached = 0;
 
     chess::Movelist moves;
     chess::movegen::legalmoves(moves, board);
 
     if (moves.empty()) {
-        if (board.inCheck()) {
-            return -NNUE::MATE_VALUE;
-        }
-        return 0;
+        result.score = board.inCheck() ? -NNUE::MATE_VALUE : 0;
+        return result;
     }
-
-    order_moves(board, moves, best_move);
-
-    int best_value = -NNUE::MATE_VALUE - 1;
-    int original_alpha = alpha;
-
-    for (chess::Move m : moves) {
-        nnue.make_move(board, m);
-        int value = -search(
-            board,
-            nnue,
-            depth - 1,
-            1,
-            -beta,
-            -alpha,
-            ctx,
-            tt
-        );
-        nnue.unmake_move(board, m);
-
-        if (ctx.stopped) {
-            break;
-        }
-
-        if (value > best_value) {
-            best_value = value;
-            best_move = m;
-        }
-        alpha = std::max(alpha, best_value);
-        if (alpha >= beta) {
-            break;
-        }
-    }
-
-    if (ctx.stopped) {
-        return best_value;
-    }
-
-    TTFlag flag = (best_value <= original_alpha) ? TTFlag::UPPER
-                : (best_value >= beta)           ? TTFlag::LOWER
-                : TTFlag::EXACT;
-    tt.store(zobrist_hash, best_value, best_move, depth, flag);
-
-    return best_value;
-}
-
-SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& clock, int max_depth, TranspositionTable& tt) {
-    SearchResult result;
-    result.best_move = chess::Move::NO_MOVE;
-    int last_completed_score = 0;
 
     chess::Move best_move = chess::Move::NO_MOVE;
+    int last_completed_score = 0;
 
     for (int depth = 1; depth <= max_depth; depth++) {
         SearchContext ctx;
         ctx.clock = &clock;
 
         int window = 25;
-        int alpha, beta;
+        int alpha = -NNUE::MATE_VALUE - 1;
+        int beta  = NNUE::MATE_VALUE + 1;
 
-        if (depth <= 4) {
-            alpha = -NNUE::MATE_VALUE - 1;
-            beta = NNUE::MATE_VALUE + 1;
-        } else {
+        if (depth > 4) {
             alpha = last_completed_score - window;
-            beta = last_completed_score + window;
+            beta  = last_completed_score + window;
         }
 
-        int value;
+        int value = last_completed_score;
 
         while (true) {
-            value = search_root(board, nnue, depth, alpha, beta, ctx, best_move, tt);
+            order_moves(board, moves, best_move);
+
+            chess::Move iter_best_move = chess::Move::NO_MOVE;
+            int best_value = -NNUE::MATE_VALUE - 1;
+            int original_alpha = alpha;
+
+            for (chess::Move m : moves) {
+                nnue.make_move(board, m);
+                int v = -search(
+                    board,
+                    nnue,
+                    depth - 1,
+                    1,
+                    -beta,
+                    -alpha,
+                    ctx,
+                    tt
+                );
+                nnue.unmake_move(board, m);
+
+                if (ctx.stopped) {
+                    break;
+                }
+
+                if (v > best_value) {
+                    best_value = v;
+                    iter_best_move = m;
+                }
+                alpha = std::max(alpha, best_value);
+                if (alpha >= beta) {
+                    break;
+                }
+            }
 
             if (ctx.stopped) {
                 break;
             }
 
-            if (value <= alpha) {
+            TTFlag flag = (best_value <= original_alpha) ? TTFlag::UPPER
+                        : (best_value >= beta)           ? TTFlag::LOWER
+                        : TTFlag::EXACT;
+            tt.store(board.zobrist(), best_value, iter_best_move, depth, flag);
+
+            if (best_value <= original_alpha) {
                 window *= 2;
                 alpha = std::max(alpha - window, -NNUE::MATE_VALUE - 1);
                 continue;
             }
-            if (value >= beta) {
+            if (best_value >= beta) {
                 window *= 2;
                 beta = std::min(beta + window, NNUE::MATE_VALUE + 1);
                 continue;
             }
 
+            value = best_value;
+            best_move = iter_best_move;
             break;
         }
 
