@@ -129,6 +129,18 @@ int search(
     if (ctx.stopped) {
         return 0;
     }
+
+    if (board.isHalfMoveDraw()) {
+        return board.getHalfMoveDrawType().first == chess::GameResultReason::CHECKMATE
+            ? -NNUE::MATE_VALUE + ply
+            : 0;
+    }
+    if (board.isRepetition(1)) {
+        return 0;
+    }
+    if (board.isInsufficientMaterial()) {
+        return 0;
+    }
     
     uint64_t zobrist_hash = board.zobrist();
     TTEntry entry;
@@ -208,22 +220,50 @@ int search(
 
     int best_value = -NNUE::MATE_VALUE - 1;
     int original_alpha = alpha;
+    bool first_move = true;
 
     std::vector<chess::Move> tried_quiets;
 
     for (chess::Move m : moves) {
         nnue.make_move(board, m);
-        int value = -search(
-            board, 
-            nnue, 
-            depth - 1, 
-            ply + 1, 
-            -beta,
-            -alpha,
-            ctx,
-            tt
-        );
+        int value;
+        if (first_move) {
+            value = -search(
+                board, 
+                nnue, 
+                depth - 1, 
+                ply + 1, 
+                -beta,
+                -alpha,
+                ctx,
+                tt
+            );
+        } else {
+            value = -search(
+                board, 
+                nnue, 
+                depth - 1, 
+                ply + 1, 
+                -alpha - 1,
+                -alpha,
+                ctx,
+                tt
+            );
+            if (value > alpha && value < beta) {
+                value = -search(
+                    board, 
+                    nnue, 
+                    depth - 1, 
+                    ply + 1, 
+                    -beta,
+                    -alpha,
+                    ctx,
+                    tt
+                );
+            }
+        }
         nnue.unmake_move(board, m);
+        first_move = false;
 
         if (ctx.stopped) {
             return best_value;
@@ -290,6 +330,7 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, int max_depth
         }
 
         int value = last_completed_score;
+        bool first_move = true;
 
         while (true) {
             order_moves(board, moves, best_move, 0, ctx);
@@ -302,24 +343,51 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, int max_depth
 
             for (chess::Move m : moves) {
                 nnue.make_move(board, m);
-                int v = -search(
-                    board,
-                    nnue,
-                    depth - 1,
-                    1,
-                    -beta,
-                    -alpha,
-                    ctx,
-                    tt
-                );
+                int value;
+                if (first_move) {
+                    value = -search(
+                        board, 
+                        nnue, 
+                        depth - 1, 
+                        1, 
+                        -beta,
+                        -alpha,
+                        ctx,
+                        tt
+                    );
+                } else {
+                    value = -search(
+                        board, 
+                        nnue, 
+                        depth - 1, 
+                        1, 
+                        -alpha - 1,
+                        -alpha,
+                        ctx,
+                        tt
+                    );
+                    if (value > alpha && value < beta) {
+                        value = -search(
+                            board, 
+                            nnue, 
+                            depth - 1, 
+                            1, 
+                            -beta,
+                            -alpha,
+                            ctx,
+                            tt
+                        );
+                    }
+                }
                 nnue.unmake_move(board, m);
+                first_move = false;
 
                 if (ctx.stopped) {
                     break;
                 }
 
-                if (v > best_value) {
-                    best_value = v;
+                if (value > best_value) {
+                    best_value = value;
                     iter_best_move = m;
                 }
 
