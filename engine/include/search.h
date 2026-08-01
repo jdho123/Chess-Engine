@@ -16,6 +16,18 @@ struct SearchContext {
 
     void clear_killers();
     void store_killer(chess::Move, int ply);
+
+    static constexpr int MAX_HISTORY = 1 << 14;
+    int history_table[2][64][64];
+
+    void clear_history();
+    void update_history(
+        const chess::Move& move,
+        chess::Color side,
+        int depth, 
+        const std::vector<chess::Move>& tried_quiets
+    );
+    void age_history();
 };
 
 struct SearchResult {
@@ -61,7 +73,7 @@ private:
 
 int search(chess::Board& board, NNUE::NNUE& nnue, int depth, int ply, int alpha, int beta, SearchContext& ctx, TranspositionTable& tt);
 
-SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& clock, int max_depth, TranspositionTable& tt);
+SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, int max_depth, SearchContext& ctx, TranspositionTable& tt);
 
 int quiescence_search(chess::Board& board, NNUE::NNUE& nnue, int ply, int alpha, int beta, SearchContext& ctx, TranspositionTable& tt);
 

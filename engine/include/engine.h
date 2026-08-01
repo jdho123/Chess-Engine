@@ -18,7 +18,8 @@ private:
     SearchClock clock;
     TranspositionTable tt{1024};
     std::thread search_thread;
-
+    SearchContext ctx;
+    
     void handle_uci() const;
     void handle_position(std::istringstream& iss);
     void handle_go(std::istringstream& iss);

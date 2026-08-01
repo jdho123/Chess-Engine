@@ -16,6 +16,38 @@ void SearchContext::store_killer(chess::Move move, int ply) {
     killer_moves[ply][0] = move;
 }
 
+void SearchContext::clear_history() {
+    std::memset(&history_table, 0, sizeof(history_table));
+}
+
+void SearchContext::update_history(
+    const chess::Move& best_move, 
+    chess::Color side, 
+    int depth, 
+    const std::vector<chess::Move>& tried_quiets
+) {
+    int idx = side == chess::Color::WHITE ? 0 : 1;
+    int bonus = depth * depth;
+
+    for (const chess::Move& m : tried_quiets) {
+        int from = m.from().index();
+        int to = m.to().index();
+        int delta = (m == best_move) ? bonus : -bonus;
+
+        history_table[side][from][to] += delta - history_table[side][from][to] * std::abs(delta) / MAX_HISTORY;
+    }
+}
+
+void SearchContext::age_history() {
+    for (auto& side_table : history_table) {
+        for (auto& from_table : side_table) {
+            for (auto& val : from_table) {
+                val /= 2;
+            }
+        }
+    }
+}
+
 TranspositionTable::TranspositionTable(size_t size_mb) {
     resize(size_mb);
 }
@@ -177,6 +209,8 @@ int search(
     int best_value = -NNUE::MATE_VALUE - 1;
     int original_alpha = alpha;
 
+    std::vector<chess::Move> tried_quiets;
+
     for (chess::Move m : moves) {
         nnue.make_move(board, m);
         int value = -search(
@@ -199,9 +233,17 @@ int search(
             best_value = value;
             best_move = m;
         }
+
+        if (!board.isCapture(m)) {
+            tried_quiets.push_back(m);
+        }
+
         alpha = std::max(alpha, best_value);
         if (alpha >= beta) {
-            ctx.store_killer(m, ply);
+            if (!board.isCapture(m)) {
+                ctx.store_killer(m, ply);
+                ctx.update_history(m, board.sideToMove(), depth, tried_quiets);
+            }
             break;
         }
     }
@@ -218,7 +260,7 @@ int search(
     return best_value;
 }
 
-SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& clock, int max_depth, TranspositionTable& tt) {
+SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, int max_depth, SearchContext& ctx, TranspositionTable& tt) {
     SearchResult result;
     result.best_move = chess::Move::NO_MOVE;
     result.score = 0;
@@ -234,10 +276,6 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& 
 
     chess::Move best_move = chess::Move::NO_MOVE;
     int last_completed_score = 0;
-
-    SearchContext ctx;
-    ctx.clock = &clock;
-    ctx.clear_killers();
 
     for (int depth = 1; depth <= max_depth; depth++) {
         ctx.last_move_null = false;
@@ -259,6 +297,8 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& 
             chess::Move iter_best_move = chess::Move::NO_MOVE;
             int best_value = -NNUE::MATE_VALUE - 1;
             int original_alpha = alpha;
+
+            std::vector<chess::Move> tried_quiets;
 
             for (chess::Move m : moves) {
                 nnue.make_move(board, m);
@@ -282,9 +322,17 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& 
                     best_value = v;
                     iter_best_move = m;
                 }
+
+                if (!board.isCapture(m)) {
+                    tried_quiets.push_back(m);
+                }
+
                 alpha = std::max(alpha, best_value);
                 if (alpha >= beta) {
-                    ctx.store_killer(m, 0);
+                    if (!board.isCapture(m)) {
+                        ctx.store_killer(m, 0);
+                        ctx.update_history(m, board.sideToMove(), depth, tried_quiets);
+                    }
                     break;
                 }
             }
@@ -329,7 +377,7 @@ SearchResult find_best_move(chess::Board& board, NNUE::NNUE& nnue, SearchClock& 
                   << " pv " << chess::uci::moveToUci(best_move)
                   << std::endl;
         
-        if (clock.expired()) {
+        if (ctx.clock->expired()) {
             break;
         }
     }
@@ -471,6 +519,13 @@ int score_move(const chess::Board& board, const chess::Move& move, int ply, Sear
 
     if (move == ctx.killer_moves[ply][0]) return 8000;
     if (move == ctx.killer_moves[ply][1]) return 7000;
+
+    if (!board.isCapture(move) && move.typeOf() != chess::Move::PROMOTION) {
+        int side = board.sideToMove() == chess::Color::WHITE ? 0 : 1;
+        int from = move.from().index();
+        int to = move.to().index();
+        score += ctx.history_table[side][from][to];
+    }
 
     return score;
 }
